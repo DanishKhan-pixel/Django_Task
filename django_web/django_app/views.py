@@ -1,25 +1,52 @@
+# django_app/views.py
 
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.contrib.auth import get_user_model, authenticate
+from rest_framework import generics, status, views
 from rest_framework.response import Response
-from rest_framework import status
-from .models import User
-from .serializers import UserSerializer
-import random
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import Location, Item
+from .serializers import LocationSerializer, ItemSerializer, UserSerializer, LoginSerializer
 
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+User = get_user_model()
 
-    def create_random_user(self, request):
-        names = ['Alice', 'Bob', 'Charlie', 'David', 'Eva']
-        name = random.choice(names)
-        email = f'{name.lower()}@example.com'
-        password = 'password123'  # Use a secure password in production
+class ItemList(generics.ListCreateAPIView):
+    serializer_class = ItemSerializer
 
-        user = User.objects.create_user(email=email, name=name, password=password)
-        serializer = self.get_serializer(user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    def get_queryset(self):
+        queryset = Item.objects.all()
+        location = self.request.query_params.get('location')
+        if location is not None:
+            queryset = queryset.filter(location=location)
+        return queryset
+
+class ItemDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+
+class LocationList(generics.ListCreateAPIView):
+    queryset = Location.objects.all()
+    serializer_class = LocationSerializer
+
+class LocationDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Location.objects.all()
+    serializer_class = LocationSerializer
+
+class RegisterView(views.APIView):
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LoginView(views.APIView):
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            tokens = serializer.validated_data
+            return Response(tokens, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

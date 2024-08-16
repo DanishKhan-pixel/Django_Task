@@ -1,12 +1,13 @@
 # django_app/urls.py
 
 from django.urls import path
-from rest_framework.routers import DefaultRouter
-from .views import UserViewSet
-
-router = DefaultRouter()
-router.register(r'users', UserViewSet)
+from .views import ItemList, ItemDetail, LocationDetail, LocationList, RegisterView, LoginView
 
 urlpatterns = [
-    path('generate-random-user/', UserViewSet.as_view({'post': 'create_random_user'}), name='generate_random_user'),
-] + router.urls
+    path('location/', LocationList.as_view()),
+    path('location/<int:pk>/', LocationDetail.as_view()),
+    path('item/', ItemList.as_view()),
+    path('item/<int:pk>/', ItemDetail.as_view()),
+    path('register/', RegisterView.as_view(), name='register'),
+    path('login/', LoginView.as_view(), name='login'),
+]
