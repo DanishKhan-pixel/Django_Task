@@ -1,16 +1,14 @@
-# django_app/serializers.py
-
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Location, Item
+from .models import Item
 
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'password')
+        fields = ('id', 'email', 'name', 'password')
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -22,6 +20,13 @@ class UserSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         return user
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get('name', instance.name)
+        if 'password' in validated_data:
+            instance.set_password(validated_data['password'])
+        instance.save()
+        return instance
 
 class TokenSerializer(serializers.Serializer):
     access = serializers.CharField()
@@ -46,9 +51,4 @@ class LoginSerializer(serializers.Serializer):
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ('__all__')
-
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Location
         fields = ('__all__')
